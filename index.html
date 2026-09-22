@@ -7,8 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
     --ink: #171226;
@@ -370,7 +368,7 @@
     <div class="spacer"></div>
     <span class="count-note" id="queue-count"></span>
     <button id="clear-btn" class="chip">🗑️ Auswahl leeren</button>
-    <button id="print-btn">📄 Als PDF speichern</button>
+    <button id="print-btn">🖨️ Auswahl drucken</button>
   </div>
 </div>
 
@@ -507,78 +505,9 @@
     renderQueue();
   });
 
-  // ---- PDF-Export (jsPDF + html2canvas) -----------------------------------
-  // Jede Karte in der Druckauswahl wird als Bild gerastert (html2canvas) und
-  // dann exakt im 63x88mm-Raster (3x3 pro A4-Seite, wie in der Druckansicht)
-  // in eine echte PDF-Datei gesetzt, statt nur den Browser-Druckdialog zu
-  // öffnen.
-  const printBtn = document.getElementById("print-btn");
-  const PDF_CARD_W = 63, PDF_CARD_H = 88, PDF_GAP = 2, PDF_MARGIN = 8, PDF_COLS = 3, PDF_PER_PAGE = 9;
-
-  // html2canvas kann bei einem einzelnen Bild ewig hängen bleiben (z.B. wenn
-  // die Wiki-CDN keine CORS-Header schickt) - jede Karte bekommt deshalb ein
-  // hartes Zeitlimit, damit der Export nie komplett einfriert. Karten, die
-  // dabei scheitern, werden als leerer Rahmen mit Name übersprungen statt den
-  // ganzen Export zu blockieren.
-  function withTimeout(promise, ms) {
-    return Promise.race([
-      promise,
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Zeitüberschreitung")), ms)),
-    ]);
-  }
-
-  async function renderCardCanvas(el) {
-    return withTimeout(
-      html2canvas(el, { scale: 3, useCORS: true, imageTimeout: 6000, backgroundColor: null }),
-      9000
-    );
-  }
-
-  async function exportQueueAsPDF() {
+  document.getElementById("print-btn").addEventListener("click", () => {
     if (queue.length === 0) { alert("Die Druckauswahl ist noch leer - füge erst Karten hinzu."); return; }
-    printBtn.disabled = true;
-    const originalLabel = printBtn.textContent;
-    const cardEls = [...document.querySelectorAll("#queue-grid .card-frame")];
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: "mm", format: "a4" });
-    const failed = [];
-
-    for (let i = 0; i < cardEls.length; i++) {
-      printBtn.textContent = `📄 Erstelle PDF … (${i + 1}/${cardEls.length})`;
-      const posInPage = i % PDF_PER_PAGE;
-      if (i > 0 && posInPage === 0) doc.addPage();
-      const col = posInPage % PDF_COLS;
-      const row = Math.floor(posInPage / PDF_COLS);
-      const x = PDF_MARGIN + col * (PDF_CARD_W + PDF_GAP);
-      const y = PDF_MARGIN + row * (PDF_CARD_H + PDF_GAP);
-
-      try {
-        const canvas = await renderCardCanvas(cardEls[i]);
-        const imgData = canvas.toDataURL("image/jpeg", 0.92);
-        doc.addImage(imgData, "JPEG", x, y, PDF_CARD_W, PDF_CARD_H);
-      } catch (err) {
-        console.warn(`Karte ${i + 1} (${queue[i]?.name}) übersprungen:`, err);
-        failed.push(`#${i + 1} ${queue[i]?.name || ""}`);
-        doc.setDrawColor(200).rect(x, y, PDF_CARD_W, PDF_CARD_H);
-        doc.setFontSize(8).text(queue[i]?.name || "?", x + 3, y + 8, { maxWidth: PDF_CARD_W - 6 });
-      }
-    }
-
-    doc.save("tierspiel-sammelkarten.pdf");
-    printBtn.textContent = originalLabel;
-    printBtn.disabled = false;
-    if (failed.length > 0) {
-      alert(`PDF erstellt, aber ${failed.length} Karte(n) konnten nicht als Bild gerendert werden (nur Name/Rahmen):\n${failed.join("\n")}`);
-    }
-  }
-
-  printBtn.addEventListener("click", () => {
-    exportQueueAsPDF().catch((err) => {
-      console.error(err);
-      alert("PDF-Export fehlgeschlagen: " + err.message);
-      printBtn.textContent = "📄 Als PDF speichern";
-      printBtn.disabled = false;
-    });
+    window.print();
   });
 
   // ---- Booster-Pack: klassische TCG-Stufen-Chance statt der echten,
