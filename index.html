@@ -321,13 +321,13 @@
   /* Gedruckt wird NUR die Druckauswahl (queue-sheet), der Durchsuchen-
      Bereich und alle Steuerelemente bleiben beim Drucken komplett aus. */
   @media print {
-    @page { size: A4 portrait; margin: 8mm; }
+    @page { size: A4 landscape; margin: 8mm; }
     body { background: #fff; padding: 0; color: #000; }
     .chrome, .footer-note, .browse-sheet, .section-title, #queue-empty { display: none !important; }
     .sheet { background: #fff; border: none; border-radius: 0; padding: 0; max-width: none; }
     .card-add-btn, .card-remove-btn { display: none !important; }
     .grid {
-      grid-template-columns: repeat(3, 63mm);
+      grid-template-columns: repeat(4, 63mm);
       grid-auto-rows: 88mm;
       gap: 0;
       justify-content: center;
@@ -345,7 +345,7 @@
 
 <div class="chrome">
   <h1 class="brand">Tierspiel Sammelkarten</h1>
-  <p class="brand-sub">Alle Tiere aus dem Index als Sammelkarte im Poker-Format (63×88mm) – 9 pro A4-Seite, zum Ausschneiden entlang der gestrichelten Linie.</p>
+  <p class="brand-sub">Alle Tiere aus dem Index als Sammelkarte im Poker-Format (63×88mm) – 8 pro A4-Seite (Querformat), zum Ausschneiden entlang der gestrichelten Linie.</p>
   <div class="controls">
     <div class="chip-row" id="chip-row"></div>
     <div class="spacer"></div>
@@ -482,7 +482,7 @@
     queueGrid.innerHTML = queue.map((card, i) =>
       cardHTML(card, `<button class="card-remove-btn" data-remove="${i}" title="Entfernen">✕</button>`)
     ).join("");
-    const pages = Math.ceil(queue.length / 9) || 0;
+    const pages = Math.ceil(queue.length / 8) || 0;
     queueCount.textContent = queue.length === 0
       ? "Noch keine Karten ausgewählt"
       : `${queue.length} Karte${queue.length === 1 ? "" : "n"} · ${pages} Druckseite${pages === 1 ? "" : "n"}`;
