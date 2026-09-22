@@ -321,7 +321,7 @@
   /* Gedruckt wird NUR die Druckauswahl (queue-sheet), der Durchsuchen-
      Bereich und alle Steuerelemente bleiben beim Drucken komplett aus. */
   @media print {
-    @page { size: A4; margin: 8mm; }
+    @page { size: A4 portrait; margin: 8mm; }
     body { background: #fff; padding: 0; color: #000; }
     .chrome, .footer-note, .browse-sheet, .section-title, #queue-empty { display: none !important; }
     .sheet { background: #fff; border: none; border-radius: 0; padding: 0; max-width: none; }
