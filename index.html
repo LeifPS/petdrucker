@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tierspiel Sammelkarten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #171226;
+    --panel: #241a3d;
+    --panel-2: #2d2150;
+    --border-soft: #3c2f61;
+    --paper: #faf6ec;
+    --paper-edge: #ddd2b4;
+    --accent: #ffb703;
+    --accent-2: #e91e8c;
+    --text: #f1ecff;
+    --text-dim: #b3a6d9;
+    --stat-text: #4a4030;
+    background: var(--ink);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font-family: 'Inter', system-ui, sans-serif;
+    padding-inline: 16px;
+    padding-block: 20px 60px;
+  }
+  h1, h2, .card-name, .brand { font-family: 'Baloo 2', sans-serif; }
+
+  /* ---------- Kopfbereich ---------- */
+  .chrome {
+    max-width: 1180px;
+    margin: 0 auto 22px;
+  }
+  .brand {
+    font-weight: 800;
+    font-size: clamp(1.6rem, 4vw, 2.3rem);
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin: 0 0 4px;
+    text-wrap: balance;
+  }
+  .brand-sub {
+    color: var(--text-dim);
+    margin: 0 0 18px;
+    font-size: 0.95rem;
+    max-width: 62ch;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 12px 14px;
+  }
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1 1 320px;
+  }
+  .chip {
+    background: var(--panel-2);
+    border: 1px solid var(--border-soft);
+    color: var(--text-dim);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  }
+  .chip:hover { transform: translateY(-1px); }
+  .chip.active {
+    color: #1b1330;
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  }
+  .spacer { flex: 1 1 auto; }
+  .count-note {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .is-hidden { display: none !important; }
+  #print-btn, #pack-btn {
+    border: none;
+    border-radius: 999px;
+    padding: 10px 18px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  #print-btn {
+    background: linear-gradient(135deg, var(--accent), #ffd166);
+    color: #221400;
+    box-shadow: 0 4px 14px rgba(255, 183, 3, 0.35);
+  }
+  #pack-btn {
+    background: linear-gradient(135deg, var(--accent-2), #ff6ec7);
+    color: #2b0018;
+    box-shadow: 0 4px 14px rgba(233, 30, 140, 0.35);
+  }
+  #print-btn:hover { filter: brightness(1.06); }
+
+  /* ---------- Blatt / Karten-Raster ---------- */
+  .sheet {
+    max-width: 1180px;
+    margin: 0 auto;
+    background: #0e0a1c;
+    border: 1px solid var(--border-soft);
+    border-radius: 20px;
+    padding: 22px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 14px;
+  }
+
+  .card { break-inside: avoid; page-break-inside: avoid; }
+  .card.is-hidden { display: none; }
+  .card-frame {
+    aspect-ratio: 63 / 88;
+    border-radius: 10px;
+    padding: 3px;
+    height: 100%;
+  }
+  .card-inner {
+    position: relative;
+    background: var(--paper);
+    border-radius: 8px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 7px 7px 8px;
+    color: var(--stat-text);
+    overflow: hidden;
+  }
+  .card-head {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-bottom: 4px;
+  }
+  .card-rarity-pill {
+    align-self: flex-start;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+    font-size: 0.5rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    padding: 2px 7px;
+    border-radius: 999px;
+  }
+  .card-name {
+    font-weight: 700;
+    font-size: 0.78rem;
+    line-height: 1.1;
+    margin: 0;
+    color: #241a2e;
+  }
+  .card-art {
+    flex: 1;
+    border-radius: 6px;
+    background: #efe8d6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+  }
+  .card-art img { max-width: 82%; max-height: 82%; object-fit: contain; }
+  .card-art .fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    font-size: 1.1rem;
+  }
+  .card-stats {
+    margin: 5px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    font-size: 0.56rem;
+    line-height: 1.35;
+  }
+  .card-stats .row { display: flex; justify-content: space-between; gap: 6px; }
+  .card-stats dt { color: #8a7f68; font-weight: 600; }
+  .card-stats dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+  .card-ability {
+    margin-top: 4px;
+    font-size: 0.5rem;
+    line-height: 1.3;
+    color: #5b4c8a;
+    font-weight: 600;
+  }
+  .card-index {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    font-size: 0.5rem;
+    color: #a89a78;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Kleiner "+"-Button oben links auf jeder Karte im Durchsuchen-Bereich,
+     fügt sie zur Druckauswahl hinzu. */
+  .card-add-btn {
+    position: absolute;
+    top: 3px;
+    left: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.85);
+    color: #241a2e;
+    font-weight: 800;
+    font-size: 0.75rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+  .card-add-btn:hover { background: #fff; transform: scale(1.1); }
+
+  /* Entfernen-Button ("✕") auf Karten in der Druckauswahl. */
+  .card-remove-btn {
+    position: absolute;
+    top: 3px;
+    left: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255,255,255,0.85);
+    color: #b3261e;
+    font-weight: 800;
+    font-size: 0.7rem;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .card-remove-btn:hover { background: #fff; transform: scale(1.1); }
+
+  .section-title {
+    max-width: 1180px;
+    margin: 0 0 12px;
+    font-size: 1.1rem;
+    color: var(--text);
+  }
+  .section-hint { color: var(--text-dim); font-size: 0.75rem; font-weight: 400; font-family: 'Inter', sans-serif; }
+
+  .queue-chrome { margin-top: 22px; margin-bottom: 22px; }
+  .queue-label { font-weight: 700; color: var(--text); white-space: nowrap; }
+  .pack-count-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+  .pack-count-label input {
+    width: 56px;
+    background: var(--panel-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  #clear-btn { background: var(--panel-2); color: var(--text-dim); border: 1px solid var(--border-soft); }
+
+  .queue-sheet { border-color: var(--accent-2); }
+  .empty-hint {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 30px 0;
+    margin: 0;
+  }
+
+  .footer-note {
+    max-width: 1180px;
+    margin: 18px auto 0;
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    text-align: center;
+  }
+
+  @media (max-width: 480px) {
+    .grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+  }
+
+  /* ---------- Druckansicht: 3x3 Karten (63x88mm) pro A4-Seite ---------- */
+  /* Gedruckt wird NUR die Druckauswahl (queue-sheet), der Durchsuchen-
+     Bereich und alle Steuerelemente bleiben beim Drucken komplett aus. */
+  @media print {
+    @page { size: A4; margin: 8mm; }
+    body { background: #fff; padding: 0; color: #000; }
+    .chrome, .footer-note, .browse-sheet, .section-title, #queue-empty { display: none !important; }
+    .sheet { background: #fff; border: none; border-radius: 0; padding: 0; max-width: none; }
+    .card-add-btn, .card-remove-btn { display: none !important; }
+    .grid {
+      grid-template-columns: repeat(3, 63mm);
+      grid-auto-rows: 88mm;
+      gap: 2mm;
+      justify-content: center;
+    }
+    .card { width: 63mm; height: 88mm; }
+    .card-frame, .card-art, .card-rarity-pill {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .card-inner { border: 1px dashed #c9bfa0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <h1 class="brand">Tierspiel Sammelkarten</h1>
+  <p class="brand-sub">Alle Tiere aus dem Index als Sammelkarte im Poker-Format (63×88mm) – 9 pro A4-Seite, zum Ausschneiden entlang der gestrichelten Linie.</p>
+  <div class="controls">
+    <div class="chip-row" id="chip-row"></div>
+    <div class="spacer"></div>
+    <span class="count-note" id="browse-count"></span>
+  </div>
+</div>
+
+<div class="sheet browse-sheet">
+  <h2 class="section-title">Alle Tiere <span class="section-hint">– Klick auf "+ " fügt eine Karte zur Druckauswahl hinzu</span></h2>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="chrome queue-chrome">
+  <div class="controls">
+    <span class="queue-label">🎒 Booster-Pack</span>
+    <label class="pack-count-label">Packs (à 3 Karten):
+      <input type="number" id="pack-count" min="1" max="20" value="1">
+    </label>
+    <button id="pack-btn" class="action-btn">🎲 Hinzufügen</button>
+    <div class="spacer"></div>
+    <span class="count-note" id="queue-count"></span>
+    <button id="clear-btn" class="chip">🗑️ Auswahl leeren</button>
+    <button id="print-btn">🖨️ Auswahl drucken</button>
+  </div>
+</div>
+
+<div class="sheet queue-sheet">
+  <h2 class="section-title">Deine Druckauswahl</h2>
+  <div class="grid" id="queue-grid"></div>
+  <p class="empty-hint" id="queue-empty">Noch leer – füge oben einzelne Tiere hinzu oder zieh ein Booster-Pack.</p>
+</div>
+
+<p class="footer-note">Werte entsprechen dem aktuellen Spielstand von Tierspiel · Bilder von der Pet Simulator 99 Fandom-Wiki · Gedruckt wird nur die Druckauswahl unten</p>
+
+<script>
+  const CARDS = [{"id":"hase","name":"Hase","rarityId":"common","rarityName":"Gewöhnlich","rarityColor":"#8e8e9e","rarityIndex":0,"image":"https://static.wikia.nocookie.net/pets-go/images/8/82/Bunny.png","weight":"2 kg","money":"1/s","chance":"1 in 6","chanceValue":5.976,"ability":null},{"id":"katze","name":"Katze","rarityId":"common","rarityName":"Gewöhnlich","rarityColor":"#8e8e9e","rarityIndex":0,"image":"https://static.wikia.nocookie.net/pets-go/images/0/05/Cat.png","weight":"4 kg","money":"1.1/s","chance":"1 in 11","chanceValue":11.463999999999999,"ability":null},{"id":"hund","name":"Hund","rarityId":"common","rarityName":"Gewöhnlich","rarityColor":"#8e8e9e","rarityIndex":0,"image":"https://static.wikia.nocookie.net/pets-go/images/3/35/Dog.png","weight":"18 kg","money":"1.2/s","chance":"1 in 6","chanceValue":6.4879999999999995,"ability":null},{"id":"baer","name":"Bär","rarityId":"common","rarityName":"Gewöhnlich","rarityColor":"#8e8e9e","rarityIndex":0,"image":"https://static.wikia.nocookie.net/pets-go/images/a/a4/Bear.png","weight":"130 kg","money":"1.4/s","chance":"1 in 13","chanceValue":12.64,"ability":null},{"id":"elefant","name":"Elefant","rarityId":"common","rarityName":"Gewöhnlich","rarityColor":"#8e8e9e","rarityIndex":0,"image":"https://static.wikia.nocookie.net/pets-go/images/6/60/Elephant.png","weight":"4K kg","money":"1.6/s","chance":"1 in 12","chanceValue":12.152000000000001,"ability":null},{"id":"kuh","name":"Kuh","rarityId":"common","rarityName":"Gewöhnlich","rarityColor":"#8e8e9e","rarityIndex":0,"image":"https://static.wikia.nocookie.net/pets-go/images/8/84/Cow.png","weight":"600 kg","money":"1.5/s","chance":"1 in 9","chanceValue":9.264,"ability":null},{"id":"pferd","name":"Pferd","rarityId":"common","rarityName":"Gewöhnlich","rarityColor":"#8e8e9e","rarityIndex":0,"image":"https://static.wikia.nocookie.net/pets-go/images/c/c3/Horse.png","weight":"500 kg","money":"1.3/s","chance":"1 in 11","chanceValue":10.632,"ability":null},{"id":"ente","name":"Ente","rarityId":"common","rarityName":"Gewöhnlich","rarityColor":"#8e8e9e","rarityIndex":0,"image":"https://static.wikia.nocookie.net/pets-go/images/9/98/Ducky.png","weight":"1.5 kg","money":"1.1/s","chance":"1 in 7","chanceValue":7.183999999999999,"ability":null},{"id":"eichhoernchen","name":"Eichhörnchen","rarityId":"common","rarityName":"Gewöhnlich","rarityColor":"#8e8e9e","rarityIndex":0,"image":"https://static.wikia.nocookie.net/pets-go/images/4/41/Squirrel.png","weight":"400.0 g","money":"1.05/s","chance":"1 in 9","chanceValue":9.208,"ability":null},{"id":"fuchs","name":"Fuchs","rarityId":"uncommon","rarityName":"Ungewöhnlich","rarityColor":"#4caf50","rarityIndex":1,"image":"https://static.wikia.nocookie.net/pets-go/images/7/73/Fox.png","weight":"6 kg","money":"4/s","chance":"1 in 19","chanceValue":19.175,"ability":null},{"id":"biene","name":"Biene","rarityId":"uncommon","rarityName":"Ungewöhnlich","rarityColor":"#4caf50","rarityIndex":1,"image":"https://static.wikia.nocookie.net/pets-go/images/5/56/Bee.png","weight":"0.2 g","money":"5/s","chance":"1 in 32","chanceValue":32.125,"ability":null},{"id":"loewe","name":"Löwe","rarityId":"uncommon","rarityName":"Ungewöhnlich","rarityColor":"#4caf50","rarityIndex":1,"image":"https://static.wikia.nocookie.net/pets-go/images/4/47/Lion.png","weight":"190 kg","money":"6/s","chance":"1 in 38","chanceValue":38,"ability":null},{"id":"delfin","name":"Delfin","rarityId":"uncommon","rarityName":"Ungewöhnlich","rarityColor":"#4caf50","rarityIndex":1,"image":"https://static.wikia.nocookie.net/pets-go/images/0/0b/Dolphin.png","weight":"200 kg","money":"6.5/s","chance":"1 in 28","chanceValue":28.400000000000002,"ability":null},{"id":"giraffe","name":"Giraffe","rarityId":"uncommon","rarityName":"Ungewöhnlich","rarityColor":"#4caf50","rarityIndex":1,"image":"https://static.wikia.nocookie.net/pets-go/images/6/60/Giraffe.png","weight":"800 kg","money":"5.5/s","chance":"1 in 37","chanceValue":37.3,"ability":null},{"id":"eule","name":"Eule","rarityId":"uncommon","rarityName":"Ungewöhnlich","rarityColor":"#4caf50","rarityIndex":1,"image":"https://static.wikia.nocookie.net/pets-go/images/5/5c/Owl.png","weight":"1 kg","money":"5/s","chance":"1 in 34","chanceValue":34.425,"ability":null},{"id":"tiger","name":"Tiger","rarityId":"rare","rarityName":"Selten","rarityColor":"#2196f3","rarityIndex":2,"image":"https://static.wikia.nocookie.net/pets-go/images/a/ae/Tiger.png","weight":"220 kg","money":"20/s","chance":"1 in 106","chanceValue":105.52,"ability":null},{"id":"hai","name":"Hai","rarityId":"rare","rarityName":"Selten","rarityColor":"#2196f3","rarityIndex":2,"image":"https://static.wikia.nocookie.net/pets-go/images/1/14/Shark.png","weight":"900 kg","money":"24/s","chance":"1 in 52","chanceValue":52.480000000000004,"ability":null},{"id":"greif","name":"Greif","rarityId":"rare","rarityName":"Selten","rarityColor":"#2196f3","rarityIndex":2,"image":"https://static.wikia.nocookie.net/pets-go/images/f/f8/Griffin.png","weight":"260 kg","money":"28/s","chance":"1 in 68","chanceValue":68.4,"ability":null},{"id":"gepard","name":"Gepard","rarityId":"rare","rarityName":"Selten","rarityColor":"#2196f3","rarityIndex":2,"image":"https://static.wikia.nocookie.net/pets-go/images/9/9e/Cheetah.png","weight":"50 kg","money":"26/s","chance":"1 in 97","chanceValue":97.36000000000001,"ability":null},{"id":"husky","name":"Husky","rarityId":"rare","rarityName":"Selten","rarityColor":"#2196f3","rarityIndex":2,"image":"https://static.wikia.nocookie.net/pets-go/images/5/50/Husky.png","weight":"25 kg","money":"22/s","chance":"1 in 103","chanceValue":102.72,"ability":null},{"id":"drache","name":"Drache","rarityId":"epic","rarityName":"Episch","rarityColor":"#9c27b0","rarityIndex":3,"image":"https://static.wikia.nocookie.net/pets-go/images/c/c7/Dragon.png","weight":"1.20K kg","money":"90/s","chance":"1 in 386","chanceValue":385.50000000000006,"ability":null},{"id":"einhorn","name":"Einhorn","rarityId":"epic","rarityName":"Episch","rarityColor":"#9c27b0","rarityIndex":3,"image":"https://static.wikia.nocookie.net/pets-go/images/7/7e/Unicorn.png","weight":"450 kg","money":"100/s","chance":"1 in 273","chanceValue":272.7,"ability":null},{"id":"kraken","name":"Kraken","rarityId":"epic","rarityName":"Episch","rarityColor":"#9c27b0","rarityIndex":3,"image":"https://static.wikia.nocookie.net/pets-go/images/d/d3/Kraken.png","weight":"2K kg","money":"110/s","chance":"1 in 284","chanceValue":283.8,"ability":null},{"id":"fee","name":"Fee","rarityId":"epic","rarityName":"Episch","rarityColor":"#9c27b0","rarityIndex":3,"image":"https://static.wikia.nocookie.net/pets-go/images/4/43/Fairy.png","weight":"10.0 g","money":"105/s","chance":"1 in 256","chanceValue":256.2,"ability":null},{"id":"skorpion","name":"Skorpion","rarityId":"epic","rarityName":"Episch","rarityColor":"#9c27b0","rarityIndex":3,"image":"https://static.wikia.nocookie.net/pets-go/images/a/ab/Scorpion.png","weight":"100.0 g","money":"95/s","chance":"1 in 231","chanceValue":231.3,"ability":null},{"id":"engelhund","name":"Engel-Hund","rarityId":"legendary","rarityName":"Legendär","rarityColor":"#ffc107","rarityIndex":4,"image":"https://static.wikia.nocookie.net/pets-go/images/c/ce/Angel_Dog.png","weight":"20 kg","money":"400/s","chance":"1 in 1.89K","chanceValue":1886.9759999999999,"ability":null},{"id":"hydra","name":"Hydra","rarityId":"legendary","rarityName":"Legendär","rarityColor":"#ffc107","rarityIndex":4,"image":"https://static.wikia.nocookie.net/pets-go/images/9/9d/Hydra.png","weight":"1.80K kg","money":"460/s","chance":"1 in 1.59K","chanceValue":1588.896,"ability":null},{"id":"diamanthase","name":"Diamant-Hase","rarityId":"legendary","rarityName":"Legendär","rarityColor":"#ffc107","rarityIndex":4,"image":"https://static.wikia.nocookie.net/pets-go/images/e/e2/Diamond_Bunny.png","weight":"5 kg","money":"500/s","chance":"1 in 1.73K","chanceValue":1732.752,"ability":null},{"id":"hoellenhund","name":"Höllenhund","rarityId":"legendary","rarityName":"Legendär","rarityColor":"#ffc107","rarityIndex":4,"image":"https://static.wikia.nocookie.net/pets-go/images/3/3e/Hellhound.png","weight":"80 kg","money":"480/s","chance":"1 in 1.74K","chanceValue":1744.4160000000002,"ability":null},{"id":"schwarzewitwe","name":"Schwarze Witwe","rarityId":"legendary","rarityName":"Legendär","rarityColor":"#ffc107","rarityIndex":4,"image":"https://static.wikia.nocookie.net/pets-go/images/2/28/Black_Widow.png","weight":"1.0 g","money":"420/s","chance":"1 in 1.67K","chanceValue":1665.3600000000001,"ability":null},{"id":"kitsune","name":"Kitsune-Fuchs","rarityId":"mythic","rarityName":"Mythisch","rarityColor":"#e91e8c","rarityIndex":5,"image":"https://static.wikia.nocookie.net/pets-go/images/4/41/Kitsune_Fox.png","weight":"8 kg","money":"2K/s","chance":"1 in 7.51K","chanceValue":7510.320000000001,"ability":null},{"id":"narwal","name":"Narwal","rarityId":"mythic","rarityName":"Mythisch","rarityColor":"#e91e8c","rarityIndex":5,"image":"https://static.wikia.nocookie.net/pets-go/images/e/ed/Narwhal.png","weight":"1.60K kg","money":"2.30K/s","chance":"1 in 9.04K","chanceValue":9039.6,"ability":null},{"id":"sphinx","name":"Sphinx","rarityId":"mythic","rarityName":"Mythisch","rarityColor":"#e91e8c","rarityIndex":5,"image":"https://static.wikia.nocookie.net/pets-go/images/0/0e/Sphinx.png","weight":"300 kg","money":"2.50K/s","chance":"1 in 6.58K","chanceValue":6583.68,"ability":null},{"id":"kristallhirsch","name":"Kristallhirsch","rarityId":"mythic","rarityName":"Mythisch","rarityColor":"#e91e8c","rarityIndex":5,"image":"https://static.wikia.nocookie.net/pets-go/images/a/ab/Crystal_Deer.png","weight":"200 kg","money":"2.40K/s","chance":"1 in 6.25K","chanceValue":6253.2,"ability":null},{"id":"sensenmann","name":"Sensenmann","rarityId":"mythic","rarityName":"Mythisch","rarityColor":"#e91e8c","rarityIndex":5,"image":"https://static.wikia.nocookie.net/pets-go/images/7/74/Grim_Reaper.png","weight":"70 kg","money":"2.20K/s","chance":"1 in 7.96K","chanceValue":7957.44,"ability":null},{"id":"phoenix","name":"Phönix","rarityId":"divine","rarityName":"Göttlich","rarityColor":"#00bcd4","rarityIndex":6,"image":"https://static.wikia.nocookie.net/pets-go/images/c/c1/Phoenix.png","weight":"15 kg","money":"10K/s","chance":"1 in 51.03K","chanceValue":51030.00000000001,"ability":null},{"id":"pegasus","name":"Pegasus","rarityId":"divine","rarityName":"Göttlich","rarityColor":"#00bcd4","rarityIndex":6,"image":"https://static.wikia.nocookie.net/pets-go/images/4/4a/Pegasus.png","weight":"400 kg","money":"11K/s","chance":"1 in 31.17K","chanceValue":31168.800000000003,"ability":null},{"id":"kometenpony","name":"Kometen-Pony","rarityId":"divine","rarityName":"Göttlich","rarityColor":"#00bcd4","rarityIndex":6,"image":"https://static.wikia.nocookie.net/pets-go/images/b/b0/Comet_Pony.png","weight":"350 kg","money":"10.50K/s","chance":"1 in 33.27K","chanceValue":33274.8,"ability":null},{"id":"qual","name":"Agony","rarityId":"divine","rarityName":"Göttlich","rarityColor":"#00bcd4","rarityIndex":6,"image":"https://static.wikia.nocookie.net/pets-go/images/b/be/Agony.png","weight":"200 kg","money":"10.20K/s","chance":"1 in 49.73K","chanceValue":49734.00000000001,"ability":null},{"id":"a36","name":"A-36","rarityId":"prismatic","rarityName":"Prismatisch","rarityColor":"linear-gradient(135deg,#ff6d00,#ffd54f,#ff6d00)","rarityIndex":7,"image":"https://static.wikia.nocookie.net/pets-go/images/5/5b/A-36.png","weight":"900 kg","money":"55K/s","chance":"1 in 235.22K","chanceValue":235224,"ability":null},{"id":"phantomwolf","name":"Phantomwolf","rarityId":"prismatic","rarityName":"Prismatisch","rarityColor":"linear-gradient(135deg,#ff6d00,#ffd54f,#ff6d00)","rarityIndex":7,"image":"https://static.wikia.nocookie.net/pets-go/images/f/f0/Phantom_Wolf.png","weight":"45 kg","money":"58K/s","chance":"1 in 115.18K","chanceValue":115182,"ability":null},{"id":"kometenqual","name":"Kometen-Agony","rarityId":"prismatic","rarityName":"Prismatisch","rarityColor":"linear-gradient(135deg,#ff6d00,#ffd54f,#ff6d00)","rarityIndex":7,"image":"https://static.wikia.nocookie.net/pets-go/images/a/a2/Comet_Agony.png","weight":"300 kg","money":"56K/s","chance":"1 in 189.22K","chanceValue":189216,"ability":null},{"id":"tikidominus","name":"Tiki Dominus","rarityId":"transcendent","rarityName":"Transzendent","rarityColor":"linear-gradient(135deg,#5c6bc0,#b39ddb,#5c6bc0)","rarityIndex":8,"image":"https://static.wikia.nocookie.net/pets-go/images/6/6d/Tiki_Dominus.png","weight":"1.40K kg","money":"280K/s","chance":"1 in 876.42K","chanceValue":876419.9999999999,"ability":null},{"id":"daemon","name":"Dämon","rarityId":"transcendent","rarityName":"Transzendent","rarityColor":"linear-gradient(135deg,#5c6bc0,#b39ddb,#5c6bc0)","rarityIndex":8,"image":"https://static.wikia.nocookie.net/pets-go/images/c/c4/Demon.png","weight":"150 kg","money":"300K/s","chance":"1 in 1.16M","chanceValue":1156680,"ability":null},{"id":"pixeldrache","name":"Pixel-Drache","rarityId":"transcendent","rarityName":"Transzendent","rarityColor":"linear-gradient(135deg,#5c6bc0,#b39ddb,#5c6bc0)","rarityIndex":8,"image":"https://static.wikia.nocookie.net/pets-go/images/c/c8/Pixel_Dragon.png","weight":"600 kg","money":"290K/s","chance":"1 in 1.15M","chanceValue":1149390,"ability":null},{"id":"wyvern","name":"Wyvern der Unterwelt","rarityId":"ethereal","rarityName":"Ätherisch","rarityColor":"linear-gradient(135deg,#80cbc4,#e0f7fa,#80cbc4)","rarityIndex":9,"image":"https://static.wikia.nocookie.net/pets-go/images/e/e3/Wyvern_of_Hades.png","weight":"2.20K kg","money":"1.30M/s","chance":"1 in 2.12M","chanceValue":2115720,"ability":null},{"id":"eisigerphoenix","name":"Eisiger Phönix","rarityId":"ethereal","rarityName":"Ätherisch","rarityColor":"linear-gradient(135deg,#80cbc4,#e0f7fa,#80cbc4)","rarityIndex":9,"image":"https://static.wikia.nocookie.net/pets-go/images/7/7c/Icy_Phoenix.png","weight":"18 kg","money":"1.40M/s","chance":"1 in 2.84M","chanceValue":2841480,"ability":null},{"id":"nuklearqual","name":"Nuklear-Agony","rarityId":"ethereal","rarityName":"Ätherisch","rarityColor":"linear-gradient(135deg,#80cbc4,#e0f7fa,#80cbc4)","rarityIndex":9,"image":"https://static.wikia.nocookie.net/pets-go/images/4/4d/Nuclear_Agony.png","weight":"500 kg","money":"1.35M/s","chance":"1 in 2.89M","chanceValue":2893320,"ability":null},{"id":"schattendominus","name":"Schatten-Dominus","rarityId":"secret","rarityName":"Geheim","rarityColor":"linear-gradient(135deg,#424242,#9e9e9e,#424242)","rarityIndex":10,"image":"https://static.wikia.nocookie.net/pets-go/images/1/1c/Shadow_Dominus.png","weight":"1.50K kg","money":"6.50M/s","chance":"1 in 25.45M","chanceValue":25450200.000000004,"ability":null},{"id":"glitchdrache","name":"Glitch-Drache","rarityId":"secret","rarityName":"Geheim","rarityColor":"linear-gradient(135deg,#424242,#9e9e9e,#424242)","rarityIndex":10,"image":"https://static.wikia.nocookie.net/pets-go/images/f/f6/Glitched_Dragon.png","weight":"1.30K kg","money":"7M/s","chance":"1 in 14.42M","chanceValue":14418000,"ability":null},{"id":"boesercomputer","name":"Böser Computer","rarityId":"secret","rarityName":"Geheim","rarityColor":"linear-gradient(135deg,#424242,#9e9e9e,#424242)","rarityIndex":10,"image":"https://static.wikia.nocookie.net/pets-go/images/4/4b/Evil_Computer.png","weight":"50 kg","money":"6.80M/s","chance":"1 in 10.42M","chanceValue":10416600.000000002,"ability":null},{"id":"empyreumloewe","name":"Empyreum-Löwe","rarityId":"celestial","rarityName":"Himmlisch","rarityColor":"linear-gradient(135deg,#4fc3f7,#ffffff,#4fc3f7)","rarityIndex":11,"image":"https://static.wikia.nocookie.net/pets-go/images/6/69/Empyrean_Lion.png","weight":"350 kg","money":"30M/s","chance":"1 in 48.92M","chanceValue":48924000,"ability":null},{"id":"schattenhai","name":"Schattenhai","rarityId":"celestial","rarityName":"Himmlisch","rarityColor":"linear-gradient(135deg,#4fc3f7,#ffffff,#4fc3f7)","rarityIndex":11,"image":"https://static.wikia.nocookie.net/pets-go/images/7/77/Shadow_Shark.png","weight":"700 kg","money":"32M/s","chance":"1 in 51.03M","chanceValue":51030000,"ability":null},{"id":"krampushund","name":"Krampushund","rarityId":"celestial","rarityName":"Himmlisch","rarityColor":"linear-gradient(135deg,#4fc3f7,#ffffff,#4fc3f7)","rarityIndex":11,"image":"https://static.wikia.nocookie.net/pets-go/images/e/e5/Krampus_Hound.png","weight":"500 kg","money":"31M/s","chance":"1 in 88.61M","chanceValue":88613999.99999999,"ability":null},{"id":"kosmosdrache","name":"Kosmischer Drache","rarityId":"astral","rarityName":"Astral","rarityColor":"linear-gradient(135deg,#f48fb1,#ce93d8,#f48fb1)","rarityIndex":12,"image":"https://static.wikia.nocookie.net/pets-go/images/3/3e/Cosmic_Dragon.png","weight":"3K kg","money":"150M/s","chance":"1 in 314.06M","chanceValue":314064000,"ability":null},{"id":"zuckerstange","name":"Zuckerstange","rarityId":"astral","rarityName":"Astral","rarityColor":"linear-gradient(135deg,#f48fb1,#ce93d8,#f48fb1)","rarityIndex":12,"image":"https://static.wikia.nocookie.net/pets-go/images/d/d3/Candycane.png","weight":"5 kg","money":"160M/s","chance":"1 in 285.12M","chanceValue":285119999.99999994,"ability":null},{"id":"minenroboter","name":"Minenroboter","rarityId":"astral","rarityName":"Astral","rarityColor":"linear-gradient(135deg,#f48fb1,#ce93d8,#f48fb1)","rarityIndex":12,"image":"https://static.wikia.nocookie.net/pets-go/images/4/4f/Mining_Robot.png","weight":"800 kg","money":"170M/s","chance":"1 in 305.86M","chanceValue":305856000,"ability":null},{"id":"kosmischequal","name":"Kosmische Agony","rarityId":"astral","rarityName":"Astral","rarityColor":"linear-gradient(135deg,#f48fb1,#ce93d8,#f48fb1)","rarityIndex":12,"image":"https://static.wikia.nocookie.net/pets-go/images/a/a1/Cosmic_Agony.png","weight":"2K kg","money":"165M/s","chance":"1 in 424.66M","chanceValue":424656000,"ability":null},{"id":"tiefseedelfin","name":"Abgrunddelfin","rarityId":"nova","rarityName":"Nova","rarityColor":"linear-gradient(135deg,#bf360c,#ff8a65,#bf360c)","rarityIndex":13,"image":"https://static.wikia.nocookie.net/pets-go/images/9/99/Abyssal_Dolphin.png","weight":"250 kg","money":"750M/s","chance":"1 in 1.45B","chanceValue":1445040000,"ability":null},{"id":"reliktdrache","name":"Reliktdrache","rarityId":"nova","rarityName":"Nova","rarityColor":"linear-gradient(135deg,#bf360c,#ff8a65,#bf360c)","rarityIndex":13,"image":"https://static.wikia.nocookie.net/pets-go/images/b/b0/Relic_Dragon.png","weight":"2.50K kg","money":"800M/s","chance":"1 in 3.45B","chanceValue":3451679999.9999995,"ability":null},{"id":"sturmdrache","name":"Sturmdrache","rarityId":"nova","rarityName":"Nova","rarityColor":"linear-gradient(135deg,#bf360c,#ff8a65,#bf360c)","rarityIndex":13,"image":"https://static.wikia.nocookie.net/pets-go/images/a/a7/Storm_Dragon.png","weight":"1.80K kg","money":"850M/s","chance":"1 in 1.58B","chanceValue":1581120000,"ability":null},{"id":"empyreumdominus","name":"Empyreum-Dominus","rarityId":"nova","rarityName":"Nova","rarityColor":"linear-gradient(135deg,#bf360c,#ff8a65,#bf360c)","rarityIndex":13,"image":"https://static.wikia.nocookie.net/pets-go/images/7/7a/Empyrean_Dominus.png","weight":"1.60K kg","money":"820M/s","chance":"1 in 2.80B","chanceValue":2801520000,"ability":null},{"id":"runenqual","name":"Runen-Agony","rarityId":"solar","rarityName":"Solar","rarityColor":"linear-gradient(135deg,#ff8f00,#fff176,#ff8f00)","rarityIndex":14,"image":"https://static.wikia.nocookie.net/pets-go/images/e/e8/Runic_Agony.png","weight":"400 kg","money":"4B/s","chance":"1 in 9.80B","chanceValue":9795600000,"ability":null},{"id":"nuklearwolf","name":"Nuklear-Wolf","rarityId":"solar","rarityName":"Solar","rarityColor":"linear-gradient(135deg,#ff8f00,#fff176,#ff8f00)","rarityIndex":14,"image":"https://static.wikia.nocookie.net/pets-go/images/2/22/Nuclear_Wolf.png","weight":"600 kg","money":"4.20B/s","chance":"1 in 13.05B","chanceValue":13046400000,"ability":null},{"id":"galaxiefuchs","name":"Galaxie-Fuchs","rarityId":"lunar","rarityName":"Lunar","rarityColor":"linear-gradient(135deg,#b39ddb,#ede7f6,#b39ddb)","rarityIndex":15,"image":"https://static.wikia.nocookie.net/pets-go/images/3/3c/Galaxy_Fox.png","weight":"100 kg","money":"20B/s","chance":"1 in 73.12B","chanceValue":73116000000,"ability":null},{"id":"quantenqual","name":"Quanten-Agony","rarityId":"lunar","rarityName":"Lunar","rarityColor":"linear-gradient(135deg,#b39ddb,#ede7f6,#b39ddb)","rarityIndex":15,"image":"https://static.wikia.nocookie.net/pets-go/images/e/e1/Quantum_Agony.png","weight":"700 kg","money":"21B/s","chance":"1 in 42.07B","chanceValue":42065999999.99999,"ability":null},{"id":"angelus","name":"Angelus","rarityId":"lunar","rarityName":"Lunar","rarityColor":"linear-gradient(135deg,#b39ddb,#ede7f6,#b39ddb)","rarityIndex":15,"image":"https://static.wikia.nocookie.net/pets-go/images/c/c4/Angelus.png","weight":"1K kg","money":"22B/s","chance":"1 in 77.27B","chanceValue":77274000000,"ability":null},{"id":"hugeglitchedphoenix","name":"Riesiger Glitched-Phönix","rarityId":"exklusiv","rarityName":"Exklusiv","rarityColor":"linear-gradient(90deg,#ff3b3b,#ff9f1c,#ffe135,#4ade80,#38bdf8,#a78bfa,#ff6ec7)","rarityIndex":19,"image":"https://static.wikia.nocookie.net/pets-go/images/0/0c/Huge_Glitched_Phoenix.png","weight":"5K kg","money":"120% des besten Pets","chance":"Aus jedem Ei möglich (sehr selten)","chanceValue":500000000000000,"ability":"Alle 600s: mutiert ein zufälliges anderes ausgerüstetes Pet mit Glitched (×4,04)"},{"id":"hugeluckiagony","name":"Riesiger Lucki Agony","rarityId":"exklusiv","rarityName":"Exklusiv","rarityColor":"linear-gradient(90deg,#ff3b3b,#ff9f1c,#ffe135,#4ade80,#38bdf8,#a78bfa,#ff6ec7)","rarityIndex":19,"image":"https://static.wikia.nocookie.net/pets-go/images/c/c8/Huge_Lucki_Agony.png","weight":"5K kg","money":"140% des besten Pets","chance":"Aus jedem Ei möglich (sehr selten)","chanceValue":500000000000000,"ability":"Alle 1800s: 20% Chance für jedes andere ausgerüstete Pet einzeln, Lucky (×7) zu bekommen"},{"id":"hugemysticcorgi","name":"Riesiger Mystic Corgi","rarityId":"exklusiv","rarityName":"Exklusiv","rarityColor":"linear-gradient(90deg,#ff3b3b,#ff9f1c,#ffe135,#4ade80,#38bdf8,#a78bfa,#ff6ec7)","rarityIndex":19,"image":"https://static.wikia.nocookie.net/pets-go/images/b/bf/Huge_Mystic_Corgi.png","weight":"5K kg","money":"110% des besten Pets","chance":"Aus jedem Ei möglich (sehr selten)","chanceValue":500000000000000,"ability":"Alle 3600s: upgradet ein zufälliges anderes ausgerüstetes Gold-Pet zu Regenbogen (×7)"},{"id":"hugealienoctopus","name":"Riesiger Alien-Octopus","rarityId":"exklusiv","rarityName":"Exklusiv","rarityColor":"linear-gradient(90deg,#ff3b3b,#ff9f1c,#ffe135,#4ade80,#38bdf8,#a78bfa,#ff6ec7)","rarityIndex":19,"image":"https://static.wikia.nocookie.net/pets-go/images/5/52/Huge_Alien_Octopus.png","weight":"5K kg","money":"250% des besten Pets","chance":"Aus jedem Ei möglich (sehr selten)","chanceValue":500000000000000,"ability":"Alle 300s: schenkt dir so viel Geld, wie du in 60s verdient hättest"},{"id":"hugesketchcorgi","name":"Riesiger Sketch-Corgi","rarityId":"exklusiv","rarityName":"Exklusiv","rarityColor":"linear-gradient(90deg,#ff3b3b,#ff9f1c,#ffe135,#4ade80,#38bdf8,#a78bfa,#ff6ec7)","rarityIndex":19,"image":"https://static.wikia.nocookie.net/pets-go/images/1/11/Huge_Sketch_Corgi.png","weight":"5K kg","money":"150% des besten Pets","chance":"Aus jedem Ei möglich (sehr selten)","chanceValue":500000000000000,"ability":"10% Chance, ein ausgebrütetes Ei zurückzubekommen (erneut ausbrüten, voller Timer)"}]
+;
+  const RARITY_ORDER = [...new Set(CARDS.map((c) => c.rarityId))];
+  const RARITY_NAME_BY_ID = Object.fromEntries(CARDS.map((c) => [c.rarityId, c.rarityName]));
+
+  function initials(name) {
+    return name.replace(/[^\p{L}\p{N} ]/gu, "").split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
+  }
+
+  function cardHTML(card, extraButtonHTML) {
+    const isGradient = card.rarityColor.startsWith("linear");
+    const solidGuess = isGradient ? "#8a7f9e" : card.rarityColor;
+    return `
+      <div class="card" data-rarity="${card.rarityId}" data-id="${card.id}">
+        <div class="card-frame" style="background:${card.rarityColor}">
+          <div class="card-inner">
+            ${extraButtonHTML || ""}
+            <div class="card-head">
+              <span class="card-rarity-pill" style="background:${card.rarityColor}">${card.rarityName}</span>
+              <h3 class="card-name">${card.name}</h3>
+            </div>
+            <div class="card-art" style="background:${isGradient ? card.rarityColor : solidGuess}">
+              <img src="${card.image}" alt="${card.name}" loading="lazy"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+              <div class="fallback" style="display:none;">${initials(card.name)}</div>
+            </div>
+            <dl class="card-stats">
+              <div class="row"><dt>Gewicht</dt><dd>${card.weight}</dd></div>
+              <div class="row"><dt>Verdienst</dt><dd>${card.money}</dd></div>
+              ${card.ability ? "" : `<div class="row"><dt>Chance</dt><dd>${card.chance}</dd></div>`}
+            </dl>
+            ${card.ability ? `<div class="card-ability">🌀 ${card.ability}</div>` : ""}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ---------------------------------------------------------------------
+  // Durchsuchen-Bereich: alle 72 Karten, per Seltenheits-Chip filterbar,
+  // jede Karte hat einen "+"-Button zum Hinzufügen zur Druckauswahl.
+  // ---------------------------------------------------------------------
+  const CARD_BY_ID = Object.fromEntries(CARDS.map((c) => [c.id, c]));
+  const grid = document.getElementById("grid");
+  grid.innerHTML = CARDS.map((card) =>
+    cardHTML(card, `<button class="card-add-btn" data-add="${card.id}" title="Zur Druckauswahl hinzufügen">+</button>`)
+  ).join("");
+
+  const chipRow = document.getElementById("chip-row");
+  const browseCount = document.getElementById("browse-count");
+  let activeRarity = "all";
+
+  function applyFilter() {
+    for (const el of grid.children) {
+      el.classList.toggle("is-hidden", activeRarity !== "all" && el.dataset.rarity !== activeRarity);
+    }
+    const visible = activeRarity === "all" ? CARDS.length : CARDS.filter((c) => c.rarityId === activeRarity).length;
+    browseCount.textContent = `${visible} Tier${visible === 1 ? "" : "e"} gefunden`;
+  }
+
+  function makeChip(id, label) {
+    const chip = document.createElement("button");
+    chip.className = "chip" + (id === "all" ? " active" : "");
+    chip.textContent = label;
+    chip.addEventListener("click", () => {
+      activeRarity = id;
+      for (const c of chipRow.children) c.classList.toggle("active", c === chip);
+      applyFilter();
+    });
+    return chip;
+  }
+
+  chipRow.appendChild(makeChip("all", `Alle (${CARDS.length})`));
+  for (const rarityId of RARITY_ORDER) {
+    const count = CARDS.filter((c) => c.rarityId === rarityId).length;
+    chipRow.appendChild(makeChip(rarityId, `${RARITY_NAME_BY_ID[rarityId]} (${count})`));
+  }
+  applyFilter();
+
+  grid.addEventListener("click", (e) => {
+    const btn = e.target.closest(".card-add-btn");
+    if (!btn) return;
+    addToQueue(CARD_BY_ID[btn.dataset.add]);
+  });
+
+  // ---------------------------------------------------------------------
+  // Druckauswahl (Booster-Packs + manuell hinzugefügte Karten). Erlaubt
+  // Duplikate (wie beim echten Ziehen mehrerer Packs), wird komplett
+  // getrennt vom Durchsuchen-Bereich gerendert und ist der EINZIGE Bereich,
+  // der beim Drucken sichtbar bleibt (siehe @media print).
+  // ---------------------------------------------------------------------
+  let queue = [];
+  const queueGrid = document.getElementById("queue-grid");
+  const queueCount = document.getElementById("queue-count");
+  const queueEmpty = document.getElementById("queue-empty");
+
+  function renderQueue() {
+    queueEmpty.style.display = queue.length === 0 ? "block" : "none";
+    queueGrid.innerHTML = queue.map((card, i) =>
+      cardHTML(card, `<button class="card-remove-btn" data-remove="${i}" title="Entfernen">✕</button>`)
+    ).join("");
+    const pages = Math.ceil(queue.length / 9) || 0;
+    queueCount.textContent = queue.length === 0
+      ? "Noch keine Karten ausgewählt"
+      : `${queue.length} Karte${queue.length === 1 ? "" : "n"} · ${pages} Druckseite${pages === 1 ? "" : "n"}`;
+  }
+
+  function addToQueue(card) {
+    queue.push(card);
+    renderQueue();
+  }
+
+  queueGrid.addEventListener("click", (e) => {
+    const btn = e.target.closest(".card-remove-btn");
+    if (!btn) return;
+    queue.splice(Number(btn.dataset.remove), 1);
+    renderQueue();
+  });
+
+  document.getElementById("clear-btn").addEventListener("click", () => {
+    queue = [];
+    renderQueue();
+  });
+
+  document.getElementById("print-btn").addEventListener("click", () => {
+    if (queue.length === 0) { alert("Die Druckauswahl ist noch leer - füge erst Karten hinzu."); return; }
+    window.print();
+  });
+
+  // ---- Booster-Pack: klassische TCG-Stufen-Chance statt der echten,
+  // astronomisch kleinen In-Game-Odds (die wären für ein Spaß-Pack viel zu
+  // unwahrscheinlich). Jede Stufe ist um denselben Faktor seltener als die
+  // vorherige, kalibriert auf das klassische "1 von 36" für Prismatisch
+  // (wie bei echten Sammelkarten-Boostern). Innerhalb einer Stufe sind alle
+  // Tiere gleich wahrscheinlich.
+  const PACK_TIER_ORDER = [
+    "common", "uncommon", "rare", "epic", "legendary", "mythic", "divine",
+    "prismatic", "transcendent", "ethereal", "secret", "celestial", "astral",
+    "nova", "solar", "lunar", "exklusiv",
+  ];
+  const PACK_TIER_DECAY = 0.5998406565069876; // Prismatisch-ODER-BESSER landet damit exakt bei 1/36
+  const PACK_TIER_WEIGHT = Object.fromEntries(PACK_TIER_ORDER.map((t, i) => [t, Math.pow(PACK_TIER_DECAY, i)]));
+  const PACK_TIER_COUNT = CARDS.reduce((acc, c) => ((acc[c.rarityId] = (acc[c.rarityId] || 0) + 1), acc), {});
+
+  function pickWeightedPack(n) {
+    const pool = [...CARDS];
+    const weightOf = (c) => (PACK_TIER_WEIGHT[c.rarityId] || 0) / PACK_TIER_COUNT[c.rarityId];
+    const picked = [];
+    for (let i = 0; i < n && pool.length > 0; i++) {
+      const total = pool.reduce((sum, c) => sum + weightOf(c), 0);
+      let r = Math.random() * total;
+      let idx = pool.length - 1;
+      for (let j = 0; j < pool.length; j++) {
+        r -= weightOf(pool[j]);
+        if (r <= 0) { idx = j; break; }
+      }
+      picked.push(pool.splice(idx, 1)[0]);
+    }
+    return picked;
+  }
+
+  document.getElementById("pack-btn").addEventListener("click", () => {
+    const countInput = document.getElementById("pack-count");
+    const packs = Math.min(20, Math.max(1, Math.round(Number(countInput.value)) || 1));
+    countInput.value = packs;
+    for (let i = 0; i < packs; i++) {
+      queue.push(...pickWeightedPack(3));
+    }
+    renderQueue();
+  });
+
+  renderQueue();
+</script>
+</body>
+</html>
