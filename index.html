@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
     --ink: #171226;
@@ -368,7 +370,7 @@
     <div class="spacer"></div>
     <span class="count-note" id="queue-count"></span>
     <button id="clear-btn" class="chip">🗑️ Auswahl leeren</button>
-    <button id="print-btn">🖨️ Auswahl drucken</button>
+    <button id="print-btn">📄 Als PDF speichern</button>
   </div>
 </div>
 
@@ -505,9 +507,47 @@
     renderQueue();
   });
 
-  document.getElementById("print-btn").addEventListener("click", () => {
+  // ---- PDF-Export (jsPDF + html2canvas) -----------------------------------
+  // Jede Karte in der Druckauswahl wird als Bild gerastert (html2canvas) und
+  // dann exakt im 63x88mm-Raster (3x3 pro A4-Seite, wie in der Druckansicht)
+  // in eine echte PDF-Datei gesetzt, statt nur den Browser-Druckdialog zu
+  // öffnen.
+  const printBtn = document.getElementById("print-btn");
+  const PDF_CARD_W = 63, PDF_CARD_H = 88, PDF_GAP = 2, PDF_MARGIN = 8, PDF_COLS = 3, PDF_PER_PAGE = 9;
+
+  async function exportQueueAsPDF() {
     if (queue.length === 0) { alert("Die Druckauswahl ist noch leer - füge erst Karten hinzu."); return; }
-    window.print();
+    printBtn.disabled = true;
+    const originalLabel = printBtn.textContent;
+    const cardEls = [...document.querySelectorAll("#queue-grid .card-frame")];
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+
+    for (let i = 0; i < cardEls.length; i++) {
+      printBtn.textContent = `📄 Erstelle PDF … (${i + 1}/${cardEls.length})`;
+      const posInPage = i % PDF_PER_PAGE;
+      if (i > 0 && posInPage === 0) doc.addPage();
+      const canvas = await html2canvas(cardEls[i], { scale: 3, useCORS: true, backgroundColor: null });
+      const imgData = canvas.toDataURL("image/jpeg", 0.92);
+      const col = posInPage % PDF_COLS;
+      const row = Math.floor(posInPage / PDF_COLS);
+      const x = PDF_MARGIN + col * (PDF_CARD_W + PDF_GAP);
+      const y = PDF_MARGIN + row * (PDF_CARD_H + PDF_GAP);
+      doc.addImage(imgData, "JPEG", x, y, PDF_CARD_W, PDF_CARD_H);
+    }
+
+    doc.save("tierspiel-sammelkarten.pdf");
+    printBtn.textContent = originalLabel;
+    printBtn.disabled = false;
+  }
+
+  printBtn.addEventListener("click", () => {
+    exportQueueAsPDF().catch((err) => {
+      console.error(err);
+      alert("PDF-Export fehlgeschlagen: " + err.message);
+      printBtn.textContent = "📄 Als PDF speichern";
+      printBtn.disabled = false;
+    });
   });
 
   // ---- Booster-Pack: klassische TCG-Stufen-Chance statt der echten,
